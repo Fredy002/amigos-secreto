@@ -52,7 +52,13 @@ export default function Home() {
         const response = await fetch('/api/data')
         if (response.ok) {
           const loadedData = await response.json()
-          setData(loadedData)
+          // Asegurar que siempre tengamos la estructura correcta
+          setData({
+            participants: loadedData.participants || [],
+            gifts: loadedData.gifts || [],
+            assignments: loadedData.assignments || {},
+            isAssignmentGenerated: loadedData.isAssignmentGenerated || false,
+          })
         }
       } catch (error) {
         console.error("Error loading data:", error)
@@ -128,7 +134,7 @@ export default function Home() {
   }
 
   const generateSecretSanta = () => {
-    if (data.participants.length < 2) {
+    if (!data.participants || data.participants.length < 2) {
       alert("Se necesitan al menos 2 participantes para generar el amigo secreto")
       return
     }
@@ -309,13 +315,13 @@ export default function Home() {
               <CardContent className="px-4 sm:px-6">
                 <Button
                   onClick={handleGenerateSecretSanta}
-                  disabled={data.participants.length < 2}
+                  disabled={!data.participants || data.participants.length < 2}
                   className="w-full bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-sm sm:text-base"
                 >
                   <Shuffle className="w-4 h-4 mr-2" />
                   {data.isAssignmentGenerated ? "Regenerar Asignaciones" : "Generar Asignaciones"}
                 </Button>
-                {data.participants.length < 2 && (
+                {data.participants && data.participants.length < 2 && (
                   <p className="text-xs sm:text-sm text-muted-foreground mt-2 text-center">Necesitas al menos 2 participantes</p>
                 )}
               </CardContent>
