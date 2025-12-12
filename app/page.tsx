@@ -45,21 +45,30 @@ export default function Home() {
   const [showPasswordDialog, setShowPasswordDialog] = useState(false)
   const [pendingAction, setPendingAction] = useState<"add-participant" | "generate-assignment" | null>(null)
 
+  // Cargar datos desde la API al iniciar
   useEffect(() => {
-    const stored = localStorage.getItem("regalitos-data")
-    if (stored) {
-      try {
-        setData(JSON.parse(stored))
-      } catch (e) {
-        console.error("[v0] Error loading data:", e)
-      }
-    }
-    setIsLoading(false)
+    fetch('/api/data')
+      .then(res => res.json())
+      .then(data => {
+        setData(data)
+        setIsLoading(false)
+      })
+      .catch(error => {
+        console.error("Error loading data:", error)
+        setIsLoading(false)
+      })
   }, [])
 
+  // Guardar datos en la API cuando cambian
   useEffect(() => {
     if (!isLoading) {
-      localStorage.setItem("regalitos-data", JSON.stringify(data))
+      fetch('/api/data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      }).catch(error => console.error("Error saving data:", error))
     }
   }, [data, isLoading])
 
