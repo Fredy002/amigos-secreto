@@ -1,27 +1,67 @@
 import { NextResponse } from 'next/server'
+import mysql from 'mysql2/promise'
 
-// Almacenamiento en memoria (para entornos serverless como Netlify)
-// En producción, considera usar una base de datos como Vercel KV, MongoDB, etc.
-let memoryStore: any = null
+const DATABASE_URL = process.env.DATABASE_URL || 'mysql://root:WxphSUUGbTrgRuNSjDKShvNLMiBJHtPb@yamabiko.proxy.rlwy.net:27579/railway'
 
-const initialData = {
-  participants: [],
-  gifts: [],
-  assignments: {},
-  isAssignmentGenerated: false,
-}
+// Crear pool de conexiones
+const pool = mysql.createPool(DATABASE_URL)
 
-// Leer datos (de memoria o inicializar)
-function readData() {
-  if (memoryStore === null) {
-    memoryStore = { ...initialData }
+// Inicializar la tabla si no existe
+async function initializeDatabase() {
+  const connection = await pool.getConnection()
+  try {
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS regalitos_data (
+        id INT PRIMARY KEY DEFAULT 1,
+        data JSON NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `)
+    
+    // Verificar si existe un registro, si no, crear uno inicial
+    const [rows] = await connection.query('SELECT COUNT(*) as count FROM regalitos_data WHERE id = 1')
+    const count = (rows as any)[0].count
+    
+    if (count === 0) {
+      const initialData = {
+        participants: [],
+        gifts: [],
+        assignments: {},
+        isAssignmentGenerated: false,
+      }
+      await connection.query('INSERT INTO regalitos_data (id, data) VALUES (1, ?)', [JSON.stringify(initialData)])
+    }
+  } finally {
+    connection.release()
   }
-  return memoryStore
 }
 
-// Escribir datos (en memoria)
-function writeData(data: any) {
-  memoryStore = data
+// Leer datos de la base de datos
+async function readData() {
+  await initializeDatabase()
+  const connection = await pool.getConnection()
+  try {
+    const [rows] = await connection.query('SELECT data FROM regalitos_data WHERE id = 1')
+    const result = rows as any[]
+    return result[0] ? JSON.parse(result[0].data) : {
+      participants: [],
+      gifts: [],
+      assignments: {},
+      isAssignmentGenerated: false,
+    }
+  } finally {
+    connection.release()
+  }
+}
+
+// Escribir datos en la base de datos
+async function writeData(data: any) {
+  const connection = await pool.getConnection()
+  try {
+    await connection.query('UPDATE regalitos_data SET data = ? WHERE id = 1', [JSON.stringify(data)])
+  } finally {
+    connection.release()
+  }
 }
 
 // GET - Obtener datos

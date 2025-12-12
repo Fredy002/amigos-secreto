@@ -2,30 +2,26 @@
 
 Aplicación web para organizar amigos secretos de forma fácil y divertida.
 
-## 🚀 Despliegue en Netlify
-
-### Configuración Automática
-El proyecto incluye `netlify.toml` con la configuración necesaria.
+## 🚀 Despliegue
 
 ### Variables de Entorno
-No se requieren variables de entorno para la versión básica.
+El proyecto requiere la siguiente variable de entorno:
+
+```env
+DATABASE_URL=mysql://root:WxphSUUGbTrgRuNSjDKShvNLMiBJHtPb@yamabiko.proxy.rlwy.net:27579/railway
+```
 
 ### Comandos de Build
 - **Build Command:** `npm run build`
-- **Publish Directory:** `.next`
+- **Start Command:** `npm start`
 - **Node Version:** 20
 
-### Nota sobre Persistencia de Datos
-⚠️ **Importante:** En la versión actual, los datos se almacenan en memoria del servidor. Esto significa que:
-- Los datos persisten durante la sesión del servidor
-- Se reinician cuando Netlify redeplega la aplicación
-- Son compartidos por todos los usuarios
-
-### Soluciones de Persistencia Recomendadas para Producción:
-1. **MongoDB Atlas** (Gratis hasta 512MB)
-2. **Vercel KV** (Base de datos Redis)
-3. **Supabase** (PostgreSQL gratis)
-4. **PlanetScale** (MySQL serverless)
+### Base de Datos
+La aplicación utiliza **MySQL en Railway** para almacenar todos los datos de forma persistente:
+- ✅ Datos persistentes permanentemente
+- ✅ Compartidos entre todos los usuarios
+- ✅ Sin pérdida de información en redeployments
+- ✅ Inicialización automática de tablas
 
 ## 🛠️ Desarrollo Local
 
