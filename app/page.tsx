@@ -240,8 +240,7 @@ export default function Home() {
             </h1>
           </div>
           <p className="text-sm sm:text-base md:text-lg text-muted-foreground max-w-2xl mx-auto text-pretty px-2">
-            Organiza tu amigo secreto de forma fácil y divertida. Gestiona participantes, asigna amigos secretos y lleva
-            un registro de las listas de regalos.
+            Organiza nuestro amigo secreto de forma dulce y divertida, solo tú y yo. Gestionemos nuestros regalitos, sorprendámonos con detalles especiales y llevemos un registro de todo lo que hará sonreír nuestros corazones… especialmente el de Rory y el mío.
           </p>
         </div>
 
