@@ -13,6 +13,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Gift, ExternalLink, Pencil, Trash2, Plus } from "lucide-react"
@@ -30,6 +41,7 @@ interface GiftsListProps {
 export function GiftsList({ participants, gifts, onAddGift, onUpdateGift, onDeleteGift }: GiftsListProps) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [editingGift, setEditingGift] = useState<GiftItem | null>(null)
+  const [deletingGiftId, setDeletingGiftId] = useState<string | null>(null)
 
   const [selectedParticipant, setSelectedParticipant] = useState("")
   const [title, setTitle] = useState("")
@@ -64,6 +76,13 @@ export function GiftsList({ participants, gifts, onAddGift, onUpdateGift, onDele
     setTitle(gift.title)
     setDescription(gift.description)
     setLink(gift.link)
+  }
+
+  const handleDelete = () => {
+    if (deletingGiftId) {
+      onDeleteGift(deletingGiftId)
+      setDeletingGiftId(null)
+    }
   }
 
   if (participants.length === 0) {
@@ -230,9 +249,30 @@ export function GiftsList({ participants, gifts, onAddGift, onUpdateGift, onDele
                                     </div>
                                   </DialogContent>
                                 </Dialog>
-                                <Button size="sm" variant="ghost" onClick={() => onDeleteGift(gift.id)}>
-                                  <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 text-red-600" />
-                                </Button>
+                                <AlertDialog open={deletingGiftId === gift.id} onOpenChange={(open) => !open && setDeletingGiftId(null)}>
+                                  <AlertDialogTrigger asChild>
+                                    <Button size="sm" variant="ghost" onClick={() => setDeletingGiftId(gift.id)}>
+                                      <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 text-red-600" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent className="w-[calc(100%-2rem)] sm:max-w-lg">
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle className="text-base sm:text-lg">¿Eliminar regalo?</AlertDialogTitle>
+                                      <AlertDialogDescription className="text-xs sm:text-sm">
+                                        Esta acción no se puede deshacer. El regalo "{gift.title}" será eliminado permanentemente.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                                      <AlertDialogCancel className="w-full sm:w-auto text-sm sm:text-base">Cancelar</AlertDialogCancel>
+                                      <AlertDialogAction 
+                                        onClick={handleDelete}
+                                        className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-sm sm:text-base"
+                                      >
+                                        Eliminar
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
                               </div>
                             </div>
                           </div>
