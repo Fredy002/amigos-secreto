@@ -1,40 +1,27 @@
 import { NextResponse } from 'next/server'
-import fs from 'fs'
-import path from 'path'
 
-const DATA_FILE = path.join(process.cwd(), 'data', 'regalitos-data.json')
+// Almacenamiento en memoria (para entornos serverless como Netlify)
+// En producción, considera usar una base de datos como Vercel KV, MongoDB, etc.
+let memoryStore: any = null
 
-// Asegurarse de que el directorio data existe
-function ensureDataDirectory() {
-  const dataDir = path.join(process.cwd(), 'data')
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true })
-  }
+const initialData = {
+  participants: [],
+  gifts: [],
+  assignments: {},
+  isAssignmentGenerated: false,
 }
 
-// Leer datos del archivo
+// Leer datos (de memoria o inicializar)
 function readData() {
-  ensureDataDirectory()
-  
-  if (!fs.existsSync(DATA_FILE)) {
-    const initialData = {
-      participants: [],
-      gifts: [],
-      assignments: {},
-      isAssignmentGenerated: false,
-    }
-    fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2))
-    return initialData
+  if (memoryStore === null) {
+    memoryStore = { ...initialData }
   }
-  
-  const fileContent = fs.readFileSync(DATA_FILE, 'utf-8')
-  return JSON.parse(fileContent)
+  return memoryStore
 }
 
-// Escribir datos al archivo
+// Escribir datos (en memoria)
 function writeData(data: any) {
-  ensureDataDirectory()
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2))
+  memoryStore = data
 }
 
 // GET - Obtener datos

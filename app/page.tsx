@@ -47,29 +47,42 @@ export default function Home() {
 
   // Cargar datos desde la API al iniciar
   useEffect(() => {
-    fetch('/api/data')
-      .then(res => res.json())
-      .then(data => {
-        setData(data)
-        setIsLoading(false)
-      })
-      .catch(error => {
+    const loadData = async () => {
+      try {
+        const response = await fetch('/api/data')
+        if (response.ok) {
+          const loadedData = await response.json()
+          setData(loadedData)
+        }
+      } catch (error) {
         console.error("Error loading data:", error)
+      } finally {
         setIsLoading(false)
-      })
+      }
+    }
+    
+    loadData()
   }, [])
 
   // Guardar datos en la API cuando cambian
   useEffect(() => {
-    if (!isLoading) {
-      fetch('/api/data', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      }).catch(error => console.error("Error saving data:", error))
+    const saveData = async () => {
+      if (!isLoading) {
+        try {
+          await fetch('/api/data', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+          })
+        } catch (error) {
+          console.error("Error saving data:", error)
+        }
+      }
     }
+    
+    saveData()
   }, [data, isLoading])
 
   const handleAddParticipant = () => {
