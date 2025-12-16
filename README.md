@@ -8,7 +8,7 @@ Aplicación web para organizar amigos secretos de forma fácil y divertida.
 El proyecto requiere la siguiente variable de entorno:
 
 ```env
-DATABASE_URL=mysql://root:WxphSUUGbTrgRuNSjDKShvNLMiBJHtPb@yamabiko.proxy.rlwy.net:27579/railway
+DATABASE_URL=
 ```
 
 ### Comandos de Build

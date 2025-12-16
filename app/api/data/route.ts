@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server'
 import mysql from 'mysql2/promise'
 
-const DATABASE_URL = process.env.DATABASE_URL || 'mysql://root:WxphSUUGbTrgRuNSjDKShvNLMiBJHtPb@yamabiko.proxy.rlwy.net:27579/railway'
+// Validar que DATABASE_URL esté configurado
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL no está configurado en las variables de entorno')
+}
+
+const DATABASE_URL = process.env.DATABASE_URL
 
 // Crear pool de conexiones
 const pool = mysql.createPool(DATABASE_URL)
