@@ -112,7 +112,21 @@ export default function Home() {
     setNewParticipantName("")
   }
 
-  const deleteParticipant = (id: string) => {
+  const deleteParticipant = async (id: string) => {
+    // Eliminar de la base de datos primero
+    try {
+      await fetch('/api/participants', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id }),
+      })
+    } catch (error) {
+      console.error("Error deleting participant:", error)
+    }
+    
+    // Actualizar el estado local
     setData((prev) => ({
       ...prev,
       participants: prev.participants.filter((p) => p.id !== id),
@@ -202,7 +216,21 @@ export default function Home() {
     }))
   }
 
-  const deleteGift = (id: string) => {
+  const deleteGift = async (id: string) => {
+    // Eliminar de la base de datos primero
+    try {
+      await fetch('/api/gifts', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id }),
+      })
+    } catch (error) {
+      console.error("Error deleting gift:", error)
+    }
+    
+    // Actualizar el estado local
     setData((prev) => ({
       ...prev,
       gifts: prev.gifts.filter((g) => g.id !== id),

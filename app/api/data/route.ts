@@ -8,8 +8,18 @@ if (!process.env.DATABASE_URL) {
 
 const DATABASE_URL = process.env.DATABASE_URL
 
-// Crear pool de conexiones
-const pool = mysql.createPool(DATABASE_URL)
+// Crear pool de conexiones con configuración mejorada
+const pool = mysql.createPool({
+  uri: DATABASE_URL,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0,
+  maxIdle: 10,
+  idleTimeout: 60000,
+  connectTimeout: 30000,
+})
 
 // Inicializar las tablas si no existen
 async function initializeDatabase() {
@@ -69,11 +79,34 @@ async function initializeDatabase() {
   }
 }
 
+// Función auxiliar para ejecutar queries con retry
+async function executeWithRetry<T>(operation: () => Promise<T>, retries = 3): Promise<T> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await operation()
+    } catch (error: any) {
+      const isLastAttempt = i === retries - 1
+      const isConnectionError = error.code === 'PROTOCOL_CONNECTION_LOST' || 
+                                error.code === 'ECONNRESET' ||
+                                error.code === 'ETIMEDOUT'
+      
+      if (isConnectionError && !isLastAttempt) {
+        console.log(`Reintentando conexión... (intento ${i + 1}/${retries})`)
+        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)))
+        continue
+      }
+      throw error
+    }
+  }
+  throw new Error('No se pudo completar la operación después de varios intentos')
+}
+
 // Leer todos los datos de la base de datos
 async function readData() {
-  await initializeDatabase()
-  const connection = await pool.getConnection()
-  try {
+  return executeWithRetry(async () => {
+    await initializeDatabase()
+    const connection = await pool.getConnection()
+    try {
     // Obtener participantes
     const [participants] = await connection.query('SELECT id, name FROM participants ORDER BY created_at')
     
@@ -91,36 +124,26 @@ async function readData() {
     const [config] = await connection.query('SELECT is_assignment_generated FROM config WHERE id = 1')
     const isAssignmentGenerated = (config as any[])[0]?.is_assignment_generated || false
     
-    return {
-      participants,
-      gifts,
-      assignments,
-      isAssignmentGenerated
+      return {
+        participants,
+        gifts,
+        assignments,
+        isAssignmentGenerated
+      }
+    } finally {
+      connection.release()
     }
-  } finally {
-    connection.release()
-  }
+  })
 }
 
 // Escribir datos en la base de datos
 async function writeData(data: any) {
-  const connection = await pool.getConnection()
-  try {
+  return executeWithRetry(async () => {
+    const connection = await pool.getConnection()
+    try {
     await connection.beginTransaction()
     
-    // Obtener IDs actuales para comparar
-    const [currentParticipants] = await connection.query('SELECT id FROM participants')
-    const currentIds = new Set((currentParticipants as any[]).map(p => p.id))
-    const newIds = new Set(data.participants.map((p: any) => p.id))
-    
-    // Eliminar participantes que ya no están
-    for (const current of currentParticipants as any[]) {
-      if (!newIds.has(current.id)) {
-        await connection.query('DELETE FROM participants WHERE id = ?', [current.id])
-      }
-    }
-    
-    // Insertar o actualizar participantes
+    // Insertar o actualizar participantes (NUNCA ELIMINAR)
     for (const participant of data.participants) {
       await connection.query(
         `INSERT INTO participants (id, name) VALUES (?, ?) 
@@ -129,19 +152,7 @@ async function writeData(data: any) {
       )
     }
     
-    // Sincronizar regalos
-    const [currentGifts] = await connection.query('SELECT id FROM gifts')
-    const currentGiftIds = new Set((currentGifts as any[]).map(g => g.id))
-    const newGiftIds = new Set(data.gifts.map((g: any) => g.id))
-    
-    // Eliminar regalos que ya no están
-    for (const current of currentGifts as any[]) {
-      if (!newGiftIds.has(current.id)) {
-        await connection.query('DELETE FROM gifts WHERE id = ?', [current.id])
-      }
-    }
-    
-    // Insertar o actualizar regalos
+    // Insertar o actualizar regalos (NUNCA ELIMINAR)
     for (const gift of data.gifts) {
       await connection.query(
         `INSERT INTO gifts (id, participant_id, title, description, link) 
@@ -154,13 +165,16 @@ async function writeData(data: any) {
       )
     }
     
-    // Actualizar asignaciones
-    await connection.query('DELETE FROM assignments')
-    for (const [giverId, receiverId] of Object.entries(data.assignments)) {
-      await connection.query(
-        'INSERT INTO assignments (giver_id, receiver_id) VALUES (?, ?)',
-        [giverId, receiverId]
-      )
+    // Sincronizar asignaciones solo si existen
+    if (Object.keys(data.assignments).length > 0) {
+      // Eliminar asignaciones existentes solo si hay nuevas asignaciones
+      await connection.query('DELETE FROM assignments')
+      for (const [giverId, receiverId] of Object.entries(data.assignments)) {
+        await connection.query(
+          'INSERT INTO assignments (giver_id, receiver_id) VALUES (?, ?)',
+          [giverId, receiverId]
+        )
+      }
     }
     
     // Actualizar configuración
@@ -169,13 +183,14 @@ async function writeData(data: any) {
       [data.isAssignmentGenerated]
     )
     
-    await connection.commit()
-  } catch (error) {
-    await connection.rollback()
-    throw error
-  } finally {
-    connection.release()
-  }
+      await connection.commit()
+    } catch (error) {
+      await connection.rollback()
+      throw error
+    } finally {
+      connection.release()
+    }
+  })
 }
 
 // GET - Obtener datos
