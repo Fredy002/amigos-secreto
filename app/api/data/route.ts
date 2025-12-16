@@ -1,29 +1,33 @@
 import { NextResponse } from 'next/server'
 import mysql from 'mysql2/promise'
 
-// Validar que DATABASE_URL esté configurado
-if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL no está configurado en las variables de entorno')
-}
-
-const DATABASE_URL = process.env.DATABASE_URL
+let pool: mysql.Pool | null = null
 
 // Crear pool de conexiones con configuración mejorada
-const pool = mysql.createPool({
-  uri: DATABASE_URL,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  enableKeepAlive: true,
-  keepAliveInitialDelay: 0,
-  maxIdle: 10,
-  idleTimeout: 60000,
-  connectTimeout: 30000,
-})
+function getPool() {
+  if (!pool) {
+    if (!process.env.DATABASE_URL) {
+      throw new Error('DATABASE_URL no está configurado en las variables de entorno')
+    }
+    
+    pool = mysql.createPool({
+      uri: process.env.DATABASE_URL,
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 0,
+      maxIdle: 10,
+      idleTimeout: 60000,
+      connectTimeout: 30000,
+    })
+  }
+  return pool
+}
 
 // Inicializar las tablas si no existen
 async function initializeDatabase() {
-  const connection = await pool.getConnection()
+  const connection = await getPool().getConnection()
   try {
     // Tabla de participantes
     await connection.query(`
@@ -105,7 +109,7 @@ async function executeWithRetry<T>(operation: () => Promise<T>, retries = 3): Pr
 async function readData() {
   return executeWithRetry(async () => {
     await initializeDatabase()
-    const connection = await pool.getConnection()
+    const connection = await getPool().getConnection()
     try {
     // Obtener participantes
     const [participants] = await connection.query('SELECT id, name FROM participants ORDER BY created_at')
@@ -139,7 +143,7 @@ async function readData() {
 // Escribir datos en la base de datos
 async function writeData(data: any) {
   return executeWithRetry(async () => {
-    const connection = await pool.getConnection()
+    const connection = await getPool().getConnection()
     try {
     await connection.beginTransaction()
     
